@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zero-Knowledge Confessions Platform</title>
+    <!-- Load Tailwind CSS for simple, modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f7f7f9; }
+        .trust-badge {
+            background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        /* Modal overlay styling */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 sm:p-8">
+    
+    <!-- --------------------------------------- -->
+    <!-- 1. REGISTRATION/LOGIN MODAL (New Element) -->
+    <!-- --------------------------------------- -->
+    <div id="login-modal" class="modal-overlay hidden">
+        <div class="bg-white rounded-xl shadow-2xl p-8 max-w-lg w-full transform transition-all duration-300">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Secure Registration Required</h2>
+            <p class="text-sm text-gray-600 mb-6">Access is limited to verified college users only. Please complete the one-time registration.</p>
+
+            <div class="space-y-4">
+                <input type="text" id="reg-username" placeholder="Choose a Username (Displayed on posts)" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500">
+                <input type="email" id="reg-email" placeholder="College Email (@collegetest.edu)" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500">
+                
+                <hr class="my-4">
+                
+                <h3 class="text-lg font-semibold text-gray-700">Verification (Simulated)</h3>
+                
+                <!-- ID Card Upload Simulation -->
+                <div class="border p-3 rounded-lg bg-gray-50">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">1. ID Card OCR & Face Match (Simulated)</label>
+                    <button id="sim-ai-match" class="w-full p-2 bg-yellow-500 text-white font-semibold rounded-lg hover:bg-yellow-600 transition">Simulate AI Face Match</button>
+                    <p id="ai-status" class="text-xs mt-1 text-gray-500">Status: Waiting for verification...</p>
+                </div>
+                
+                <!-- Blockchain Hash Simulation -->
+                <div class="border p-3 rounded-lg bg-gray-50">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">2. Blockchain Hash Check (Simulated)</label>
+                    <button id="sim-blockchain" class="w-full p-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition">Simulate Blockchain Check</button>
+                    <p id="chain-status" class="text-xs mt-1 text-gray-500">Status: Waiting for ledger lookup...</p>
+                </div>
+                
+                <button 
+                    id="register-button"
+                    class="w-full mt-6 p-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg disabled:opacity-30 disabled:cursor-not-allowed"
+                    disabled
+                >
+                    Finalize Registration
+                </button>
+
+                <p id="reg-error-message" class="text-red-500 text-center text-sm font-medium hidden"></p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- --------------------------------------- -->
+    <!-- 2. MAIN APPLICATION UI -->
+    <!-- --------------------------------------- -->
+    <div id="app-container" class="max-w-2xl mx-auto bg-white rounded-2xl shadow-2xl p-6 sm:p-8">
+        <h1 class="text-3xl font-extrabold text-gray-900 mb-4 border-b pb-2">The Confession Gate</h1>
+        
+        <!-- Status and User Info Block -->
+        <div class="flex flex-col sm:flex-row justify-between items-center bg-blue-50 p-4 rounded-xl border border-blue-200 mb-6">
+            <div class="mb-3 sm:mb-0">
+                <p id="status-message" class="font-medium text-blue-800">Authenticating...</p>
+                <p class="text-xs text-gray-600 mt-1">
+                    Logged in as: <span id="user-display-name" class="font-bold text-gray-800">Unregistered</span>
+                    <br>
+                    Internal ID: <span id="user-id-display" class="font-mono break-all text-gray-700 text-xs">Loading...</span>
+                </p>
+            </div>
+            
+            <!-- Trust Score Display -->
+            <div class="trust-badge text-white px-5 py-2 rounded-full text-lg font-bold flex items-center">
+                Trust Score: <span id="trust-score-display" class="ml-2 text-2xl">...</span>
+            </div>
+        </div>
+
+        <!-- Posting Form -->
+        <div id="posting-section" class="border border-gray-300 rounded-xl p-5">
+            <h2 class="text-xl font-semibold mb-3 text-gray-700">Submit Confession (Text Post)</h2>
+            
+            <textarea
+                id="confession-input"
+                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150 resize-none"
+                rows="4"
+                placeholder="Type your confession here... (Minimum Trust Score: 100)"
+                disabled
+            ></textarea>
+            
+            <!-- Dynamic Messaging and Button -->
+            <p id="post-requirement-message" class="text-sm mt-2 text-red-500 font-medium hidden">
+                You need a Trust Score of 100 or more to post.
+            </p>
+            
+            <button 
+                id="post-button"
+                class="mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                disabled
+            >
+                Post Anonymously (Encrypted)
+            </button>
+        </div>
+        
+        <!-- Confessions List Container -->
+        <div class="mt-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Community Confessions</h2>
+            <div id="confessions-list-container" class="space-y-4">
+                <!-- Confessions will be rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- FIREBASE AND APPLICATION LOGIC -->
+    <script type="module">
+        // --- 1. MANDATORY FIREBASE IMPORTS ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, doc, setDoc, onSnapshot, collection, serverTimestamp, setLogLevel, updateDoc, increment 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        setLogLevel('debug');
+
+        // --- 2. GLOBAL VARIABLE HANDLING (CRITICAL) ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof _firebase_config !== 'undefined' ? JSON.parse(_firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // --- 3. DOM Elements and Global State ---
+        const MIN_TRUST_SCORE = 100;
+        const COLLEGE_DOMAIN = '@collegetest.edu'; // SIMULATED DOMAIN CHECK
+
+        const statusEl = document.getElementById('status-message');
+        const userIdEl = document.getElementById('user-id-display');
+        const userDisplayNameEl = document.getElementById('user-display-name');
+        const trustScoreEl = document.getElementById('trust-score-display');
+        const confessionInput = document.getElementById('confession-input');
+        const postButton = document.getElementById('post-button');
+        const postReqMsgEl = document.getElementById('post-requirement-message');
+        const confessionsListContainer = document.getElementById('confessions-list-container');
+        
+        // Modal elements
+        const loginModal = document.getElementById('login-modal');
+        const regUsernameInput = document.getElementById('reg-username');
+        const regEmailInput = document.getElementById('reg-email');
+        const registerButton = document.getElementById('register-button');
+        const regErrorMsgEl = document.getElementById('reg-error-message');
+        
+        // Simulation buttons
+        const simAiMatchBtn = document.getElementById('sim-ai-match');
+        const simBlockchainBtn = document.getElementById('sim-blockchain');
+        const aiStatusEl = document.getElementById('ai-status');
+        const chainStatusEl = document.getElementById('chain-status');
+        
+        let db;
+        let auth;
+        let currentUserId = null;
+        let userTrustScore = 0;
+        let currentUserName = "Unregistered User"; // New state for username
+
+        let isAiVerified = false;
+        let isBlockchainVerified = false;
+
+
+        // --- 4. FIREBASE INITIALIZATION AND AUTHENTICATION ---
+        async function initializeFirebase() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                statusEl.textContent = "Attempting secure sign-in...";
+
+                // We MUST sign in anonymously first to get a currentUserId, 
+                // which allows us to check their profile document.
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    currentUserId = user ? user.uid : crypto.randomUUID();
+                    userIdEl.textContent = currentUserId;
+                    
+                    // Once we have a UID, we can check if they have a full profile
+                    startProfileListener(); 
+                    // Start listening for public posts regardless of registration status
+                    startConfessionListener(); 
+                });
+
+            } catch (e) {
+                console.error("Firebase Initialization Error:", e);
+                statusEl.textContent = CRITICAL ERROR: Initialization failed.;
+            }
+        }
+
+        // --- 5. REAL-TIME USER PROFILE LISTENER (CRITICAL FOR TRUST SCORE) ---
+        function startProfileListener() {
+            if (!db || !currentUserId) return;
+
+            const profileDocRef = doc(db, 'artifacts', appId, 'users', currentUserId, 'user_data', 'profile_doc');
+
+            onSnapshot(profileDocRef, (docSnapshot) => {
+                if (docSnapshot.exists()) {
+                    // Profile found! User is registered.
+                    const profile = docSnapshot.data();
+                    userTrustScore = profile.trustScore || 100;
+                    currentUserName = profile.username || "Anonymous User";
+                    
+                    trustScoreEl.textContent = userTrustScore;
+                    userDisplayNameEl.textContent = currentUserName;
+                    statusEl.textContent = Welcome, ${currentUserName}! Trust Score synced.;
+                    loginModal.classList.add('hidden'); // Hide modal if profile exists
+                    
+                } else {
+                    // Profile NOT found. User needs to register.
+                    userTrustScore = 0; // Set to 0 temporarily
+                    trustScoreEl.textContent = userTrustScore;
+                    userDisplayNameEl.textContent = "Unregistered";
+                    statusEl.textContent = "Please complete registration.";
+                    openLoginModal();
+                }
+                
+                enforcePostingRule();
+            }, (error) => {
+                console.error("Error loading user profile:", error);
+                statusEl.textContent = "Error: Could not load Trust Score.";
+            });
+        }
+        
+        // --- 6. REGISTRATION / LOGIN MODAL HANDLERS (NEW) ---
+        
+        function openLoginModal() {
+            loginModal.classList.remove('hidden');
+        }
+        
+        // Function to check if all verification steps are complete
+        function checkRegistrationStatus() {
+            const username = regUsernameInput.value.trim();
+            const email = regEmailInput.value.trim();
+            const isEmailValid = email.toLowerCase().endsWith(COLLEGE_DOMAIN);
+            
+            if (username && isEmailValid && isAiVerified && isBlockchainVerified) {
+                registerButton.disabled = false;
+                regErrorMsgEl.classList.add('hidden');
+            } else {
+                registerButton.disabled = true;
+                if (!isEmailValid && email) {
+                    regErrorMsgEl.textContent = Email must end with ${COLLEGE_DOMAIN};
+                    regErrorMsgEl.classList.remove('hidden');
+                } else {
+                    regErrorMsgEl.classList.add('hidden');
+                }
+            }
+        }
+
+        // Simulates the AI Face Match process
+        simAiMatchBtn.onclick = () => {
+            aiStatusEl.textContent = "Status: Scanning...";
+            // Simulate a delay for the AI process
+            setTimeout(() => {
+                isAiVerified = true;
+                simAiMatchBtn.disabled = true;
+                aiStatusEl.textContent = "Status: ✅ Face Match > 90% (Simulated Success)";
+                simAiMatchBtn.classList.replace('bg-yellow-500', 'bg-green-600');
+                checkRegistrationStatus();
+            }, 1000);
+        };
+        
+        // Simulates the Blockchain Hash Check process
+        simBlockchainBtn.onclick = () => {
+            chainStatusEl.textContent = "Status: Checking ledger...";
+            // Simulate a delay for the Blockchain lookup
+            setTimeout(() => {
+                isBlockchainVerified = true;
+                simBlockchainBtn.disabled = true;
+                chainStatusEl.textContent = "Status: ✅ Unique ID Hash Confirmed (Simulated Success)";
+                simBlockchainBtn.classList.replace('bg-purple-600', 'bg-green-600');
+                checkRegistrationStatus();
+            }, 1000);
+        };
+
+        // Final registration handler
+        async function handleRegistration() {
+            const username = regUsernameInput.value.trim();
+            const email = regEmailInput.value.trim();
+
+            if (!username || !email || !isAiVerified || !isBlockchainVerified) {
+                regErrorMsgEl.textContent = "Please complete all fields and verification steps.";
+                regErrorMsgEl.classList.remove('hidden');
+                return;
+            }
+
+            // Create the new user document with the collected data and initial score
+            const profileDocRef = doc(db, 'artifacts', appId, 'users', currentUserId, 'user_data', 'profile_doc');
+            
+            try {
+                await setDoc(profileDocRef, {
+                    trustScore: 100, // Initial score upon verified login
+                    username: username,
+                    email: email, // Note: Email should be stored securely/hashed in a real app
+                    createdAt: serverTimestamp(),
+                    isBanned: false,
+                });
+                // Success: The onSnapshot listener will catch this update and hide the modal.
+            } catch (e) {
+                regErrorMsgEl.textContent = "Registration failed. Check console.";
+                console.error("Error finalizing registration:", e);
+            }
+        }
+
+        // --- 7. POSTING RULE ENFORCEMENT (THE CORE LOGIC) ---
+        function enforcePostingRule() {
+            // Check if the user is registered AND meets the score requirement
+            const isRegistered = currentUserName !== "Unregistered User" && currentUserName !== "Anonymous User";
+
+            if (userTrustScore >= MIN_TRUST_SCORE && isRegistered) {
+                confessionInput.disabled = false;
+                postButton.disabled = false;
+                postReqMsgEl.classList.add('hidden');
+                statusEl.textContent = Ready to post! Current score: ${userTrustScore};
+            } else {
+                confessionInput.disabled = true;
+                postButton.disabled = true;
+                postReqMsgEl.classList.remove('hidden');
+                
+                if (!isRegistered) {
+                    postReqMsgEl.textContent = "You must complete registration to post.";
+                } else {
+                    postReqMsgEl.textContent = Your Trust Score (${userTrustScore}) is below the minimum required score of ${MIN_TRUST_SCORE}.;
+                }
+                statusEl.textContent = Access Denied. Check score or registration status.;
+            }
+        }
+
+        // --- 8. POSTING LOGIC (CREATE OPERATION) ---
+        async function handlePostConfession() {
+            const text = confessionInput.value.trim();
+            if (!text || postButton.disabled) return;
+
+            postButton.disabled = true;
+            statusEl.textContent = "Attempting to post confession...";
+
+            const encryptedTextPlaceholder = btoa(text); 
+            
+            const confessionData = {
+                type: 'TEXT',
+                encryptedPayload: encryptedTextPlaceholder,
+                userId: currentUserId,
+                username: currentUserName, // NEW: Include username for display
+                trustScoreSnapshot: userTrustScore,
+                isFlagged: false, 
+                currentUpvotes: 0,
+                currentDownvotes: 0,
+                createdAt: serverTimestamp(),
+            };
+
+            try {
+                const confessionsColRef = collection(db, 'artifacts', appId, 'public', 'data', 'confessions');
+                await setDoc(doc(confessionsColRef), confessionData); 
+                
+                confessionInput.value = '';
+                statusEl.textContent = "Confession posted! Awaiting moderation scan...";
+            } catch (error) {
+                console.error("Error posting confession:", error);
+                statusEl.textContent = "Error: Failed to post confession.";
+            } finally {
+                enforcePostingRule(); 
+            }
+        }
+        
+        // --- 9. REAL-TIME CONFESSION LISTENER (READ OPERATION) ---
+        function startConfessionListener() {
+            if (!db) return;
+
+            const confessionsColRef = collection(db, 'artifacts', appId, 'public', 'data', 'confessions');
+
+            onSnapshot(confessionsColRef, (snapshot) => {
+                const confessions = [];
+                snapshot.forEach(doc => {
+                    confessions.push({ id: doc.id, ...doc.data() });
+                });
+
+                confessions.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+
+                renderConfessions(confessions);
+                console.log(Loaded ${confessions.length} confessions.);
+            }, (error) => {
+                console.error("Error listening to confessions:", error);
+            });
+        }
+
+        // --- 10. VOTING LOGIC (UPDATE OPERATION - Simplified) ---
+        async function handleVote(confessionId, type) {
+            if (!db || !currentUserId) return;
+            
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'confessions', confessionId);
+            
+            let updateData = {};
+            if (type === 'upvote') {
+                updateData.currentUpvotes = increment(1); 
+            } else if (type === 'downvote') {
+                updateData.currentDownvotes = increment(1);
+            }
+            
+            try {
+                await updateDoc(docRef, updateData);
+                console.log(Vote registered: ${type} on ${confessionId});
+            } catch (e) {
+                console.error("Error registering vote:", e);
+            }
+        }
+
+        // --- 11. CONFESSION RENDERING FUNCTION ---
+        function renderConfessions(confessions) {
+            confessionsListContainer.innerHTML = '';
+            
+            if (confessions.length === 0) {
+                confessionsListContainer.innerHTML = '<div class="text-center text-gray-500 p-6 bg-gray-100 rounded-lg">Be the first to share a confession!</div>';
+                return;
+            }
+
+            confessions.forEach(conf => {
+                const postElement = document.createElement('div');
+                postElement.className = 'bg-white border border-gray-200 rounded-xl shadow-lg p-5';
+                
+                const decryptedText = atob(conf.encryptedPayload || '');
+                
+                // NEW: Display the username
+                const posterName = conf.username || "Unknown Poster"; 
+                
+                const content = `
+                    <div class="flex justify-between items-start mb-3">
+                        <span class="text-xs font-semibold uppercase text-gray-500">${conf.type} Post</span>
+                        ${conf.isFlagged ? '<span class="text-xs font-bold text-red-500 bg-red-100 px-3 py-1 rounded-full">🚩 FLAGGED</span>' : ''}
+                    </div>
+                    
+                    <p class="text-lg text-gray-800 italic mb-4">${decryptedText}</p>
+                    
+                    <div class="flex justify-between items-center border-t pt-3">
+                        <div class="flex space-x-3">
+                            <!-- Upvote Button -->
+                            <button 
+                                data-id="${conf.id}" 
+                                data-vote="upvote" 
+                                class="vote-button flex items-center px-3 py-1 bg-green-50 hover:bg-green-100 text-green-700 font-semibold rounded-full text-sm transition duration-150"
+                                title="Upvote (Current Score: ${conf.currentUpvotes || 0})"
+                            >
+                                <span class="mr-1">▲</span> ${conf.currentUpvotes || 0}
+                            </button>
+                            
+                            <!-- Downvote Button -->
+                            <button 
+                                data-id="${conf.id}" 
+                                data-vote="downvote" 
+                                class="vote-button flex items-center px-3 py-1 bg-red-50 hover:bg-red-100 text-red-700 font-semibold rounded-full text-sm transition duration-150"
+                                title="Downvote (Current Score: ${conf.currentDownvotes || 0})"
+                            >
+                                <span class="mr-1">▼</span> ${conf.currentDownvotes || 0}
+                            </button>
+                        </div>
+                        
+                        <span class="text-xs text-gray-400">Poster: ${posterName}</span>
+                    </div>
+                `;
+                postElement.innerHTML = content;
+                confessionsListContainer.appendChild(postElement);
+            });
+
+            document.querySelectorAll('.vote-button').forEach(button => {
+                button.onclick = (e) => {
+                    const id = e.currentTarget.dataset.id;
+                    const type = e.currentTarget.dataset.vote;
+                    handleVote(id, type);
+                };
+            });
+        }
+
+        // --- 12. EVENT LISTENERS ---
+        postButton.addEventListener('click', handlePostConfession);
+        confessionInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !postButton.disabled) {
+                handlePostConfession();
+            }
+        });
+        
+        // NEW Event listener for registration button
+        registerButton.addEventListener('click', handleRegistration);
+        
+        // NEW Event listener for registration inputs to check status
+        [regUsernameInput, regEmailInput].forEach(input => {
+            input.addEventListener('input', checkRegistrationStatus);
+        });
+
+        // Start the entire application flow
+        initializeFirebase();
+
+    </script>
+</body>
+</html>
